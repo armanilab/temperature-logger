@@ -2,8 +2,12 @@ import time
 import board
 from digitalio import DigitalInOut, Direction, Pull
 
-led = DigitalInOut(board.LED, direction = Direction.OUTPUT)
-button_b = DigitalInOut(board.D6, direction = Direction.INPUT, pull=Pull.UP)
+led = DigitalInOut(board.LED)
+led.direction = Direction.OUTPUT
+
+button_b = DigitalInOut(board.D6)
+button_b.direction = Direction.INPUT
+button_b.pull=Pull.UP
 
 while True:
     if button_b.value:
