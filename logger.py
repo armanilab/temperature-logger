@@ -84,12 +84,16 @@ title_text =            "Temperature Logger   "
 next_test_text =        "Next test: #"
 ready_text =            "         Ready to go!"
 pretest_button_text =   "[A] START   [C] MEAS "
-test_button_text =      "[B] END [C] MEAS *REC"
+test_button_text =      "[B] END     [C] MEAS "
+test_header_text =      "#               "
+rec_text =              "**REC"
 time_text =             "Time:                "
 temp_text =             "Temp:                "
 end_test_text =         "Test ended: "
 total_time =            "Total time: "
 single_meas_text =      "Temp:                "
+error_text =            "ERROR:               "
+file_error_text =       "Write to file failed."
 
 non_test_group = displayio.Group()
 line1 = label.Label(terminalio.FONT, text = title_text, x = 0,
@@ -107,80 +111,114 @@ non_test_group.append(line3)
 non_test_group.append(line4)
 non_test_group.append(big_line12)
 
-
 # logging screen
 test_group = displayio.Group()
+test_title_label = label.Label(terminalio.FONT, text = test_header_text,
+    x = 0, y = 6)
+rec_label = label.Label(terminalio.FONT, text = rec_text,
+    anchor_point = (1.0, 0.5), anchored_position = (128, 6))
 time_label = label.Label(terminalio.FONT,
-    text = time_text, x = 0, y = 8)
+    text = time_text, x = 0, y = 18)
 temp_label = label.Label(terminalio.FONT, scale = 2,
-    text = temp_text, x = 0, y = 24)
+    text = temp_text, x = 0, y = 36)
 buttons_label = label.Label(terminalio.FONT, text = test_button_text,
     anchor_point = (0.0, 1.0), anchored_position = (0, 64))
     # need to test this to see if this works, otherwise anchor_point
     # and anchored_position may need to be set afterwards
+test_group.append(test_title_label)
+test_group.append(rec_label)
 test_group.append(time_label)
 test_group.append(temp_label)
 test_group.append(buttons_label)
 
-# end screen
-# msg_label = label.Label(terminalio.FONT, text = end_test_text,
-#     x = 0, y = 8)
-# length_label = label.Label(terminalio.FONT, text = total_time_text,
-#     x = 0, y = 24)
-# ready_label = label.Label(terminalio.FONT, text = ready_text, x = 0, y = 40)
-# button_label = label.Label(terminalio.FONT, text = pretest_button_text,
-#     anchor_point = (0.0, 1.0), anchored_position = (0, 64))
-# final_group = displayio.Group()
-# final_group.append(msg_label)
-# final_group.append(length_label)
-# final_group.append(ready_label)
-# final_group.append(button_label)
+# error screen
+error_group = displayio.Group()
+error_label = label.Label(terminalio.FONT, text = error_text, scale = 2,
+    x = 0, y = 8)
+error_msg_label1 = label.Label(terminalio.FONT, text = clear_text, x = 0,
+    y = 30)
+error_msg_label2 = label.Label(terminalio.FONT, text = clear_text, x = 0,
+    y = 44)
+error_group.append(error_label)
+error_group.append(error_msg_label1)
+error_group.append(error_msg_label2)
 
-def measure_temp(): # TODO: check if we need to pass in the pin as an argument
-    # read analog input pin and convert it using equations given by Adafruit
+# --- DEFINE HELPER FUNCTIONS ------------------------------------------------
+
+# take a temperature measurement, based on Adafruit's equations for their
+# AD8495 thermocouple amplifier
+def measure_temp():
     # convert thermocouple raw data into voltage
     voltage = (temp_sensor.value * 3.3) / 65536
-    return (voltage - 1.25) / 0.005 # convert to temperature in C
+    # convert to temperature in deg C
+    return (voltage - 1.25) / 0.005
 
+# reads the new test number from the specified file
 def get_test_num():
     try:
         with open("/sd/num_file.txt", "r") as num_file:
-            return int(num_file.readline())
-    except:
-        print("error getting test number")
+            num_file = int(num_file.readline())
+    except OSError:
+        print("Error getting test number - file error")
         return 0
+    return num_file
 
+# updates the file that contains the test number with a new value
 def update_test_num(new_test_num):
     try:
         with open("/sd/num_file.txt", "w") as num_file:
-            num_file.write(new_test_num)
-    except:
-        print("error writing new test number")
+            num_file.write(str(new_test_num))
+            print("updated test_num to " + str(new_test_num))
+    except OSError:
+        print("Error writing new test number - file error")
+
+# updates the display to indicate that a file recording error has occurred
+# file recording errors make this program useless, so putting the logger
+# into an endless loop to blink the LED is fine - the user will need
+# to reset the file writing system anyways
+def throw_fatal_file_error(test_num):
+    error_msg_label1.text = file_error_text
+    error_msg_label2.text = "File: test{n}.txt".format(n = test_num)
+    display.show(error_group)
+
+    while True:
+        led.value = True
+        time.sleep(1)
+        led.value = False
+        time.sleep(1)
 
 # --- START PROGRAM ----------------------------------------------------------
-#TODO: get next test_num and replace it in the text string next_test_text
+# display the initial logger screen, updated to the current test number
 test_num = get_test_num()
 line2.text = next_test_text + str(test_num)
-
 display.show(non_test_group)
 
 while True:
+    # update the current time variable
+    current_time = time.monotonic_ns() * NS_TO_SEC
+
     # check for inputs
-    if not button_a.value and time.time() - last_a_press > DEBOUNCE_TIME:
+    if (not button_a.value and current_time - last_a_press >= DEBOUNCE_TIME):
         a_pressed = True
-        last_a_press = time.time()
-    if not button_b.value and time.time() - last_b_press > DEBOUNCE_TIME:
+        last_a_press = current_time
+        print("a pressed")
+    if (not button_b.value and current_time - last_b_press >= DEBOUNCE_TIME):
         b_pressed = True
-        last_b_press = time.time()
-    if not button_c.value and time.time() - last_c_press > DEBOUNCE_TIME:
+        last_b_press = current_time
+        print("b_pressed")
+    if (not button_c.value and current_time - last_c_press >= DEBOUNCE_TIME):
         c_pressed = True
-        last_c_press = time.time()
+        last_c_press = current_time
+        print("c_pressed")
 
     if c_pressed:
-        # take a single measurement - only display it on the screen
+        # take a single measurement - only display it on the screen, not logged
         print("c button pressed")
+
+        # measure the temperature
         temperature = measure_temp()
-        # TODO: display measured temperature
+
+        # display measured temperature
         line1.text = clear_text
         line2.text = clear_text
         big_line12.text = "Temp:{temp:.1f}".format(temp = temperature)
@@ -190,87 +228,94 @@ while True:
     if (a_pressed): # start logging now
         print("a button pressed")
 
+        # determine the file name, based on the test number
         test_num = get_test_num()
-
         file_name = "/sd/test{n}.txt".format(n = test_num)
+
+        # update the display with test details
+        test_title_label.text = "#" + str(test_num)
         display.show(test_group)
-        led.value = True
+        led.value = True # turn LED on to indicate test is occurring
         print("logging starting...")
 
         # actually start logging
-        with open(file_name, "w") as file:
-            # initialize file with headers
-            file.write("Time(s)\tTemp(deg C)\n")
+        try:
+            with open(file_name, "r") as file: # CHANGE BACK TO "W"
+                # initialize file with headers
+                file.write("Time(s)\tTemp(deg C)\n")
 
-            # define test start time
-            time_elapsed = 0
-            test_start = time.monotonic_ns() * NS_TO_SEC # in nanoseconds
-            last_measurement = test_start - MEASUREMENT_INTERVAL
+                # define test start time
+                time_elapsed = 0
+                test_start = time.monotonic_ns() * NS_TO_SEC # in nanoseconds
+                last_measurement = test_start - MEASUREMENT_INTERVAL
 
-            while True:
-                # check for inputs
-                #a_pressed = not button_a.value # don't actually care about a button
-                if not button_b.value and time.monotonic_ns() * NS_TO_SEC - last_b_press > DEBOUNCE_TIME:
-                    b_pressed = True
-                    last_b_press = time.monotonic_ns() * NS_TO_SEC
-                    print("b_pressed - in logging")
-                if not button_c.value and time.monotonic_ns() * NS_TO_SEC - last_c_press > DEBOUNCE_TIME:
-                    c_pressed = True
-                    last_c_press = time.monotonic_ns() * NS_TO_SEC
-                    print("c_pressed - in logging")
+                while True:
+                    # update the time variables
+                    current_time = time.monotonic_ns() * NS_TO_SEC
+                    time_elapsed = current_time - test_start
 
-                time_elapsed = time.monotonic_ns() * NS_TO_SEC - test_start
-                # ONLY log measurements at the measurement interval
-                if time_elapsed - last_measurement >= MEASUREMENT_INTERVAL or c_pressed:
-                    # TODO: take measurement
-                    temperature = measure_temp() # FIX with analog reading + conversion
+                    # check for inputs - note that A doesn't do anything during
+                    # the test, so we can ignore it
+                    if (not button_b.value
+                        and current_time - last_b_press >= DEBOUNCE_TIME):
+                        b_pressed = True
+                        last_b_press = current_time
+                        print("b_pressed - in logging")
+                    if (not button_c.value
+                        and current_time - last_c_press >= DEBOUNCE_TIME):
+                        c_pressed = True
+                        last_c_press = current_time
+                        print("c_pressed - in logging")
 
-                    # TODO: log time and temperature
-                    # format the time
-                    time_str = "{t:.4f}".format(t = time_elapsed)
-                    temp_str = "{temp:.6f}".format(temp = temperature)
-                    file.write(time_str + "\t" + temp_str + "\n")
+                    # ONLY log measurements at the measurement interval or if
+                    # triggered as a single measurement by the C button
+                    if (c_pressed or
+                        current_time - last_measurement >= MEASUREMENT_INTERVAL):
+                        # take the measurement
+                        temperature = measure_temp() # FIX with analog reading + conversion
 
-                    # TODO: print time and temperature to the display
-                    temp_label.text = "Temp:{temp:.1f}".format(temp = temperature)
-                    time_label.text = "Time:{t:.2f}".format(t = time_elapsed)
-                    display.show(test_group)
+                        # write the time and temp to a text file
+                        time_str = "{t:.4f}".format(t = time_elapsed)
+                        temp_str = "{temp:.6f}".format(temp = temperature)
+                        file.write(time_str + "\t" + temp_str + "\n")
 
-                    if not c_pressed:
-                        last_measurement = time_elapsed
+                        # print time and temperature to the display
+                        temp_label.text = "Temp:{temp:.1f}".format(temp = temperature)
+                        time_label.text = "Time:{t:.2f}".format(t = time_elapsed)
+                        print(time_label.text)
+                        print(temp_label.text)
+                        display.show(test_group)
 
-                # check for button press -> if so, end test
-                if (b_pressed):
-                    print("end test")
-                    file.flush()
-                    break
-                # reset buttons
-                b_pressed = False
-                c_pressed = False
+                        # if the measurement was triggered by the C button as an
+                        # individual measurement, do not reset the time counter.
+                        # We want all measurements to occur as regularly as
+                        # possible on the specified time interval
+                        if not c_pressed:
+                            last_measurement = current_time
 
-        # reset system
-        led.value = False
+                    # check for button press -> if so, end test
+                    if (b_pressed):
+                        print("end test")
+                        file.flush() # make sure everything is written to file
+                        b_pressed = False
+                        break
+
+                    # reset input variables
+                    b_pressed = False
+                    c_pressed = False
+
+        except OSError: # file recording error
+            throw_fatal_file_error(test_num)
+
+        # reset system for next test
+        led.value = False # turn LED off
+        # update the screen to give details of last completed test
         line1.text = end_test_text + "#" + str(test_num)
-        line2.text = "Total time: {t}".format(int(t = time_elapsed))
+        line2.text = "Total time: {t}".format(t = int(time_elapsed))
         update_test_num(test_num + 1) # update test number
-        display.show(final_group)
+        display.show(non_test_group)
+
+    # reset input variables
     a_pressed = False
     b_pressed = False
     c_pressed = False
-# check for button presses ->
-# if pressed & not already logging ->
-    # start test
-    # initialize text file w/ time + date (name of file)
-    # add headers to top of file
-    # log every t seconds
-    # LED stays on while recording
-    # on screen:
-        # time elapsed
-        # current temp
-        # logging indicator
-
-# else if pressed & logging ->
-    # end test, save file
-    # print saved file
-
-# IF ERROR: screen prints AND LED blinks
