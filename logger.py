@@ -20,7 +20,7 @@ import storage
 
 # --- TESTING PARAMETERS -----------------------------------------------------
 # seconds between measurements
-MEASUREMENT_INTERVAL = 2
+MEASUREMENT_INTERVAL = 10
 
 # --- SETUP ------------------------------------------------------------------
 NS_TO_SEC = 1e-9 # conversion for times from ns to s
