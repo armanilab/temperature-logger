@@ -1,6 +1,6 @@
-#TODO: how to name files? just numbering them? rtc doesn't work like on RPi
-# and we didn't put a battery in the logger.
-# TODO: measurements aren't appearing during the test
+# Temperature logger
+# written by Lexie Scholtz
+# last updated: 03.01.2022
 
 import time
 import board
@@ -32,7 +32,7 @@ temp_sensor = analogio.AnalogIn(board.A5)
 led = DigitalInOut(board.LED)
 led.direction = Direction.OUTPUT
 
-# setup button
+# setup buttons
 button_a = DigitalInOut(board.D9) # start test
 button_a.direction = Direction.INPUT
 button_a.pull = Pull.UP
@@ -55,7 +55,6 @@ DEBOUNCE_TIME = 0.1
 displayio.release_displays() # reset displays that may have been attached
 i2c = board.I2C() # setup I2C
 display_bus = displayio.I2CDisplay(i2c, device_address=0x3C) # default address
-print("I2C successful")
 
 # display parameters: SH1107 is vertically oriented 64x128
 WIDTH = 128
@@ -64,7 +63,6 @@ BORDER = 2
 display = adafruit_displayio_sh1107.SH1107(
     display_bus, width=WIDTH, height=HEIGHT, rotation=0
 )
-print("display setup successful")
 
 # setup SD card
 spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO)
@@ -78,7 +76,7 @@ vfs = storage.VfsFat(sd_card)
 storage.mount(vfs, "/sd") # /sd/ now used as location for sd card files
 
 # --- DEFINE DISPLAY SCREENS -------------------------------------------------
-# initialization screen
+# texts to be used in display
 clear_text =            "                     "
 title_text =            "Temperature Logger   "
 next_test_text =        "Next test: #"
@@ -95,6 +93,7 @@ single_meas_text =      "Temp:                "
 error_text =            "ERROR:               "
 file_error_text =       "Write to file failed."
 
+# screen for use when tests are not in progress
 non_test_group = displayio.Group()
 line1 = label.Label(terminalio.FONT, text = title_text, x = 0,
     y = 8)
@@ -123,8 +122,6 @@ temp_label = label.Label(terminalio.FONT, scale = 2,
     text = temp_text, x = 0, y = 36)
 buttons_label = label.Label(terminalio.FONT, text = test_button_text,
     anchor_point = (0.0, 1.0), anchored_position = (0, 64))
-    # need to test this to see if this works, otherwise anchor_point
-    # and anchored_position may need to be set afterwards
 test_group.append(test_title_label)
 test_group.append(rec_label)
 test_group.append(time_label)
@@ -168,7 +165,6 @@ def update_test_num(new_test_num):
     try:
         with open("/sd/num_file.txt", "w") as num_file:
             num_file.write(str(new_test_num))
-            print("updated test_num to " + str(new_test_num))
     except OSError:
         print("Error writing new test number - file error")
 
@@ -201,20 +197,14 @@ while True:
     if (not button_a.value and current_time - last_a_press >= DEBOUNCE_TIME):
         a_pressed = True
         last_a_press = current_time
-        print("a pressed")
     if (not button_b.value and current_time - last_b_press >= DEBOUNCE_TIME):
         b_pressed = True
         last_b_press = current_time
-        print("b_pressed")
     if (not button_c.value and current_time - last_c_press >= DEBOUNCE_TIME):
         c_pressed = True
         last_c_press = current_time
-        print("c_pressed")
 
-    if c_pressed:
-        # take a single measurement - only display it on the screen, not logged
-        print("c button pressed")
-
+    if c_pressed: # take a single measurement - only display it, not logged
         # measure the temperature
         temperature = measure_temp()
 
@@ -224,10 +214,7 @@ while True:
         big_line12.text = "Temp:{temp:.1f}".format(temp = temperature)
         display.show(non_test_group)
 
-
     if (a_pressed): # start logging now
-        print("a button pressed")
-
         # determine the file name, based on the test number
         test_num = get_test_num()
         file_name = "/sd/test{n}.txt".format(n = test_num)
@@ -240,7 +227,7 @@ while True:
 
         # actually start logging
         try:
-            with open(file_name, "r") as file: # CHANGE BACK TO "W"
+            with open(file_name, "w") as file: # CHANGE BACK TO "W"
                 # initialize file with headers
                 file.write("Time(s)\tTemp(deg C)\n")
 
@@ -260,12 +247,10 @@ while True:
                         and current_time - last_b_press >= DEBOUNCE_TIME):
                         b_pressed = True
                         last_b_press = current_time
-                        print("b_pressed - in logging")
                     if (not button_c.value
                         and current_time - last_c_press >= DEBOUNCE_TIME):
                         c_pressed = True
                         last_c_press = current_time
-                        print("c_pressed - in logging")
 
                     # ONLY log measurements at the measurement interval or if
                     # triggered as a single measurement by the C button
@@ -282,8 +267,6 @@ while True:
                         # print time and temperature to the display
                         temp_label.text = "Temp:{temp:.1f}".format(temp = temperature)
                         time_label.text = "Time:{t:.2f}".format(t = time_elapsed)
-                        print(time_label.text)
-                        print(temp_label.text)
                         display.show(test_group)
 
                         # if the measurement was triggered by the C button as an
@@ -295,7 +278,6 @@ while True:
 
                     # check for button press -> if so, end test
                     if (b_pressed):
-                        print("end test")
                         file.flush() # make sure everything is written to file
                         b_pressed = False
                         break
