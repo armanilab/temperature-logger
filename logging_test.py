@@ -2,7 +2,7 @@
 # the SD card into your computer. There should be a .txt file named "test.txt"
 # that says "Hello world!" in it.
 
- needed for initializing SPI and CS line connections
+# needed for initializing SPI and CS line connections
 import board
 import busio
 import digitalio
@@ -21,7 +21,7 @@ vfs = storage.VfsFat(sd_card)
 # mount the microSD card filesystem into the CircuitPython file system
 storage.mount(vfs, "/sd") # /sd/ now used as location for sd card files
 
-with open("/sd/test.txt", "w") as file:
-    file.write("Hello world!\n")
+with open("/sd/num_file.txt", "w") as file:
+    print(file.write("1")
 
 print("done!")
