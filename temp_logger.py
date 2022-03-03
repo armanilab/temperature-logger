@@ -157,6 +157,9 @@ def get_test_num():
             num_file = int(num_file.readline())
     except OSError:
         print("Error getting test number - file error")
+        # file not found - initialize a new file with starting test_num = 1
+        with open("/sd/num_file.txt", "w") as file:
+            file.write("1")
         return 0
     return num_file
 
