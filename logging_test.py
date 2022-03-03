@@ -22,6 +22,6 @@ vfs = storage.VfsFat(sd_card)
 storage.mount(vfs, "/sd") # /sd/ now used as location for sd card files
 
 with open("/sd/num_file.txt", "w") as file:
-    print(file.write("1")
+    file.write("1")
 
 print("done!")
