@@ -237,7 +237,7 @@ while True:
         try:
             with open(file_name, "w") as file: # CHANGE BACK TO "W"
                 # initialize file with headers
-                file.write("Time(s)\tTemp(C)\n")
+                file.write("Time(s)\tTemp(C)\tType\n")
 
                 # define test start time
                 time_elapsed = 0
@@ -246,6 +246,7 @@ while True:
                 last_update = test_start - UPDATE_INTERVAL
 
                 while True:
+                    button_presses = 0
                     # update the time variables
                     current_time = time.monotonic_ns() * NS_TO_SEC
                     time_elapsed = current_time - test_start
@@ -273,10 +274,18 @@ while True:
                         update_display_temp(temperature, time_elapsed)
 
                         # write the time and temp to a text file
+                        # also write the type of measurement - whether it was
+                        # a regularly timed measurement (0) or a button press
+                        # (numbered to keep track of key timepoints)
                         if do_log or c_pressed:
                             time_str = "{t:.4f}".format(t = time_elapsed)
                             temp_str = "{temp:.6f}".format(temp = temperature)
-                            file.write(time_str + "\t" + temp_str + "\n")
+                            type_str = "0"
+                            if c_pressed:
+                                button_presses += 1
+                                type_str = "{presses}".format(button_presses)
+                            file.write(time_str + "\t" + temp_str + "\t"
+                                + type_str + "\n")
                             file.flush()
 
                         # if the measurement was triggered by the C button as an
