@@ -19,8 +19,8 @@ import adafruit_sdcard
 import storage
 
 # --- TESTING PARAMETERS -----------------------------------------------------
-# seconds between measurements
-MEASUREMENT_INTERVAL = 10
+LOGGING_INTERVAL = 10 # seconds between logged measurements
+UPDATE_INTERVAL = 1 # seconds between updates to display (measurements)
 
 # --- SETUP ------------------------------------------------------------------
 NS_TO_SEC = 1e-9 # conversion for times from ns to s
@@ -150,6 +150,11 @@ def measure_temp():
     # convert to temperature in deg C
     return (voltage - 1.25) / 0.005
 
+def update_display_temp(temperature, time_elapsed):
+    temp_label.text = "Temp:{temp:.1f}".format(temp = temperature)
+    time_label.text = "Time:{t:.2f}".format(t = time_elapsed)
+    display.show(test_group)
+
 # reads the new test number from the specified file
 def get_test_num():
     try:
@@ -232,18 +237,21 @@ while True:
         try:
             with open(file_name, "w") as file: # CHANGE BACK TO "W"
                 # initialize file with headers
-                file.write("Time(s)\tTemp(deg C)\n")
+                file.write("Time(s)\tTemp(C)\n")
 
                 # define test start time
                 time_elapsed = 0
                 test_start = time.monotonic_ns() * NS_TO_SEC # in nanoseconds
-                last_measurement = test_start - MEASUREMENT_INTERVAL
+                last_measurement = test_start - LOGGING_INTERVAL
+                last_update = test_start - UPDATE_INTERVAL
 
                 while True:
                     # update the time variables
                     current_time = time.monotonic_ns() * NS_TO_SEC
                     time_elapsed = current_time - test_start
 
+                    do_log = (current_time - last_measurement >= LOGGING_INTERVAL)
+                    do_update = (current_time - last_update >= UPDATE_INTERVAL)
                     # check for inputs - note that A doesn't do anything during
                     # the test, so we can ignore it
                     if (not button_b.value
@@ -257,27 +265,29 @@ while True:
 
                     # ONLY log measurements at the measurement interval or if
                     # triggered as a single measurement by the C button
-                    if (c_pressed or
-                        current_time - last_measurement >= MEASUREMENT_INTERVAL):
+                    if (c_pressed or do_log or do_update):
                         # take the measurement
-                        temperature = measure_temp() # FIX with analog reading + conversion
-
-                        # write the time and temp to a text file
-                        time_str = "{t:.4f}".format(t = time_elapsed)
-                        temp_str = "{temp:.6f}".format(temp = temperature)
-                        file.write(time_str + "\t" + temp_str + "\n")
+                        temperature = measure_temp()
 
                         # print time and temperature to the display
-                        temp_label.text = "Temp:{temp:.1f}".format(temp = temperature)
-                        time_label.text = "Time:{t:.2f}".format(t = time_elapsed)
-                        display.show(test_group)
+                        update_display_temp(temperature, time_elapsed)
+
+                        # write the time and temp to a text file
+                        if do_log or c_pressed:
+                            time_str = "{t:.4f}".format(t = time_elapsed)
+                            temp_str = "{temp:.6f}".format(temp = temperature)
+                            file.write(time_str + "\t" + temp_str + "\n")
+                            file.flush()
 
                         # if the measurement was triggered by the C button as an
                         # individual measurement, do not reset the time counter.
                         # We want all measurements to occur as regularly as
                         # possible on the specified time interval
-                        if not c_pressed:
+                        if do_update:
+                            last_update = current_time
+                        if do_log:
                             last_measurement = current_time
+                            last_update = current_time
 
                     # check for button press -> if so, end test
                     if (b_pressed):
@@ -297,6 +307,7 @@ while True:
         # update the screen to give details of last completed test
         line1.text = end_test_text + "#" + str(test_num)
         line2.text = "Total time: {t}".format(t = int(time_elapsed))
+        big_line12.text = clear_text
         update_test_num(test_num + 1) # update test number
         display.show(non_test_group)
 
