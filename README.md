@@ -15,6 +15,7 @@
 - Micro B USB cable
 
 Total cost for major electronic components (*): $58.80
+
 *Prices based on ordering directly from Adafruit in March 2022*
 
 **Equipment needed for assembly and setup:**
@@ -57,7 +58,7 @@ Your temperature logger is now up and running!
 **Note:** if you need to make any modifications to the program (for example, the measurement interval or the pin that the temperature sensor is connected to), we prefer the Mu Editor for ease of updating the code on the Feather.
 
 ## Program Description
-When triggered via a button press, the temperature logger measures and records the temperature of the K-type probe with time stamps to a datafile saved on the attached microSD card. By default, measurements will be taken every 10 seconds, but this can be modified by modifying the `MEASUREMENT_INTERVAL` constant in the `code.py` file.
+When triggered via a button press, the temperature logger measures and records the temperature of the K-type probe with time stamps to a datafile saved on the attached microSD card. By default, measurements will be taken every 10 seconds, but this can be modified by modifying the `MEASUREMENT_INTERVAL` constant in the `code.py` file. The screen will update every 1 second (but those temperatures will not be recorded), but this can be modified via the `UPDATE_INTERVAL` constant in the `code.py` file.
 
 ### User interface:
 - A button – starts a new logging session
@@ -76,9 +77,9 @@ which restarts the numbering.
 
 The files contain a single header line:
 ```
-Time(s)	Temp(C)
+Time(s)	Temp(C) Type
 ```
-followed by two columns of data that represent the time in seconds and the temperature in degrees Celsius, separated by a tab character. The files can easily be opened in Excel and the data separated into columns by using tab or whitespace as a deliminator.
+followed by three tab-separated columns of data that represent (1) the time in seconds, (2) the temperature in degrees Celsius, and (3) the type of measurement. The type of measurement is given as 0 if it was an automatically logged measurement (based on the time interval), or a whole number counting up from 0 if the measurement was triggered by a button press. This functionality will allow the user to track the times and temperature of key time points (such as when a reaction starts, when reagents are added, when heat is applied, etc.). The files can easily be opened in Excel and the data separated into columns by using tab or whitespace as a deliminator.
 
 ## Test Scripts
 - `button.py` - can be used to confirm that the Featherwing is properly connected to the Feather. Pressing any of the buttons will turn the LED on or off. The program will also count the number of button presses. Each time a button is pressed, the program prints out the button name and the counter to the Serial monitor.
