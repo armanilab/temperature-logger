@@ -235,49 +235,50 @@ while True:
 
         # actually start logging
         try:
-            with open(file_name, "w") as file: # CHANGE BACK TO "W"
+            with open(file_name, "w") as file:
                 # initialize file with headers
                 file.write("Time(s)\tTemp(C)\tType\n")
 
-                # define test start time
-                time_elapsed = 0
-                test_start = time.monotonic_ns() * NS_TO_SEC # in nanoseconds
-                last_measurement = test_start - LOGGING_INTERVAL
-                last_update = test_start - UPDATE_INTERVAL
+            # define test start time
+            time_elapsed = 0
+            test_start = time.monotonic_ns() * NS_TO_SEC # in nanoseconds
+            last_measurement = test_start - LOGGING_INTERVAL
+            last_update = test_start - UPDATE_INTERVAL
 
-                while True:
-                    button_presses = 0
-                    # update the time variables
-                    current_time = time.monotonic_ns() * NS_TO_SEC
-                    time_elapsed = current_time - test_start
+            while True:
+                button_presses = 0
+                # update the time variables
+                current_time = time.monotonic_ns() * NS_TO_SEC
+                time_elapsed = current_time - test_start
 
-                    do_log = (current_time - last_measurement >= LOGGING_INTERVAL)
-                    do_update = (current_time - last_update >= UPDATE_INTERVAL)
-                    # check for inputs - note that A doesn't do anything during
-                    # the test, so we can ignore it
-                    if (not button_b.value
-                        and current_time - last_b_press >= DEBOUNCE_TIME):
-                        b_pressed = True
-                        last_b_press = current_time
-                    if (not button_c.value
-                        and current_time - last_c_press >= DEBOUNCE_TIME):
-                        c_pressed = True
-                        last_c_press = current_time
+                do_log = (current_time - last_measurement >= LOGGING_INTERVAL)
+                do_update = (current_time - last_update >= UPDATE_INTERVAL)
+                # check for inputs - note that A doesn't do anything during
+                # the test, so we can ignore it
+                if (not button_b.value
+                    and current_time - last_b_press >= DEBOUNCE_TIME):
+                    b_pressed = True
+                    last_b_press = current_time
+                if (not button_c.value
+                    and current_time - last_c_press >= DEBOUNCE_TIME):
+                    c_pressed = True
+                    last_c_press = current_time
 
-                    # ONLY log measurements at the measurement interval or if
-                    # triggered as a single measurement by the C button
-                    if (c_pressed or do_log or do_update):
-                        # take the measurement
-                        temperature = measure_temp()
+                # ONLY log measurements at the measurement interval or if
+                # triggered as a single measurement by the C button
+                if (c_pressed or do_log or do_update):
+                    # take the measurement
+                    temperature = measure_temp()
 
-                        # print time and temperature to the display
-                        update_display_temp(temperature, time_elapsed)
+                    # print time and temperature to the display
+                    update_display_temp(temperature, time_elapsed)
 
-                        # write the time and temp to a text file
-                        # also write the type of measurement - whether it was
-                        # a regularly timed measurement (0) or a button press
-                        # (numbered to keep track of key timepoints)
-                        if do_log or c_pressed:
+                    # write the time and temp to a text file
+                    # also write the type of measurement - whether it was
+                    # a regularly timed measurement (0) or a button press
+                    # (numbered to keep track of key timepoints)
+                    if do_log or c_pressed:
+                        with open(file_name, "a") as file: # CHANGE BACK TO "W"
                             time_str = "{t:.4f}".format(t = time_elapsed)
                             temp_str = "{temp:.6f}".format(temp = temperature)
                             type_str = "0"
@@ -288,25 +289,25 @@ while True:
                                 + type_str + "\n")
                             file.flush()
 
-                        # if the measurement was triggered by the C button as an
-                        # individual measurement, do not reset the time counter.
-                        # We want all measurements to occur as regularly as
-                        # possible on the specified time interval
-                        if do_update:
-                            last_update = current_time
-                        if do_log:
-                            last_measurement = current_time
-                            last_update = current_time
+                    # if the measurement was triggered by the C button as an
+                    # individual measurement, do not reset the time counter.
+                    # We want all measurements to occur as regularly as
+                    # possible on the specified time interval
+                    if do_update:
+                        last_update = current_time
+                    if do_log:
+                        last_measurement = current_time
+                        last_update = current_time
 
-                    # check for button press -> if so, end test
-                    if (b_pressed):
-                        file.flush() # make sure everything is written to file
-                        b_pressed = False
-                        break
-
-                    # reset input variables
+                # check for button press -> if so, end test
+                if (b_pressed):
+                    file.flush() # make sure everything is written to file
                     b_pressed = False
-                    c_pressed = False
+                    break
+
+                # reset input variables
+                b_pressed = False
+                c_pressed = False
 
         except OSError: # file recording error
             throw_fatal_file_error(test_num)
