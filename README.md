@@ -77,11 +77,11 @@ which restarts the numbering.
 
 The files contain a single header line:
 ```
-Time(s)	Temp(C) Type
+Time(s)	Temp(C) Press
 ```
 followed by three tab-separated columns of data that represent (1) the time in seconds, (2) the temperature in degrees Celsius, and (3) the type of measurement. The type of measurement is given as 0 if it was an automatically logged measurement (based on the time interval), or a whole number counting up from 0 if the measurement was triggered by a button press. This functionality will allow the user to track the times and temperature of key time points (such as when a reaction starts, when reagents are added, when heat is applied, etc.). The files can easily be opened in Excel and the data separated into columns by using tab or whitespace as a deliminator.
 
 ## Test Scripts
-- `button.py` - can be used to confirm that the Featherwing is properly connected to the Feather. Pressing any of the buttons will turn the LED on or off. The program will also count the number of button presses. Each time a button is pressed, the program prints out the button name and the counter to the Serial monitor.
-- `screen_tst.py` - can be used to confirm that the OLED screen on the Featherwing is working properly. Prints a small recording symbol to the screen.
+- `button_test.py` - can be used to confirm that the Featherwing is properly connected to the Feather. Pressing any of the buttons will turn the LED on or off. The program will also count the number of button presses. Each time a button is pressed, the program prints out the button name and the counter to the Serial monitor.
+- `screen_test.py` - can be used to confirm that the OLED screen on the Featherwing is working properly. Prints a small recording symbol to the screen.
 - `logging_test.py` - can be used to confirm that the Adalogger and microSD card are working properly. Writes a text file called `num_file.txt` containing `1` to the microSD card. This also resets the numbering of the logging sessions.
