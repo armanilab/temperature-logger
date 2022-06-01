@@ -1,6 +1,6 @@
 # Temperature logger
 # written by Lexie Scholtz
-# last updated: 03.01.2022
+# last updated: 06.01.2022
 
 import time
 import board
@@ -20,7 +20,7 @@ import storage
 
 # --- TESTING PARAMETERS -----------------------------------------------------
 LOGGING_INTERVAL = 10 # seconds between logged measurements
-UPDATE_INTERVAL = 1 # seconds between updates to display (measurements)
+UPDATE_INTERVAL = 0.5 # seconds between updates to display (measurements)
 
 # --- SETUP ------------------------------------------------------------------
 NS_TO_SEC = 1e-9 # conversion for times from ns to s
@@ -226,6 +226,8 @@ while True:
         # determine the file name, based on the test number
         test_num = get_test_num()
         file_name = "/sd/test{n}.txt".format(n = test_num)
+        # update the test number
+        update_test_num(test_num + 1)
 
         # update the display with test details
         test_title_label.text = "#" + str(test_num)
@@ -237,7 +239,10 @@ while True:
         try:
             with open(file_name, "w") as file:
                 # initialize file with headers
-                file.write("Time(s)\tTemp(C)\tType\n")
+                file.write("Time(s)\tTemp(C)\tPress#\n")
+
+            # define variable to track button presses
+            button_presses = 0
 
             # define test start time
             time_elapsed = 0
@@ -246,7 +251,7 @@ while True:
             last_update = test_start - UPDATE_INTERVAL
 
             while True:
-                button_presses = 0
+
                 # update the time variables
                 current_time = time.monotonic_ns() * NS_TO_SEC
                 time_elapsed = current_time - test_start
@@ -284,7 +289,7 @@ while True:
                             type_str = "0"
                             if c_pressed:
                                 button_presses += 1
-                                type_str = "{presses}".format(button_presses)
+                                type_str = "{presses}".format(presses = button_presses)
                             file.write(time_str + "\t" + temp_str + "\t"
                                 + type_str + "\n")
                             file.flush()
@@ -318,7 +323,6 @@ while True:
         line1.text = end_test_text + "#" + str(test_num)
         line2.text = "Total time: {t}".format(t = int(time_elapsed))
         big_line12.text = clear_text
-        update_test_num(test_num + 1) # update test number
         display.show(non_test_group)
 
     # reset input variables
