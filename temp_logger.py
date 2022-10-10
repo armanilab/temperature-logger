@@ -306,7 +306,6 @@ while True:
 
                 # check for button press -> if so, end test
                 if (b_pressed):
-                    file.flush() # make sure everything is written to file
                     b_pressed = False
                     break
 
